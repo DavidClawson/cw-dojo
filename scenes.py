@@ -2,28 +2,17 @@
 
 import pygame
 from audio import Sidetone, CWPlayer
-from morse import Decoder, KOCH_ORDER, CHAR_TO_MORSE
+from morse import Decoder, KOCH_ORDER
 from koch import KochTrainer
 from progress import KochProgress
 from settings import Settings
 from glossary import GLOSSARY
+from buttons import (BTN_A, BTN_B, BTN_X, BTN_Y,
+                     BTN_L1, BTN_R1, BTN_L2, BTN_R2,
+                     BTN_SELECT, BTN_START,
+                     BTN_DPAD_UP, BTN_DPAD_DOWN,
+                     BTN_DPAD_LEFT, BTN_DPAD_RIGHT)
 from ui import Display
-
-# R36S r33s_joypad button mapping (from gamecontrollerdb.txt)
-BTN_A = 1
-BTN_B = 0
-BTN_X = 2
-BTN_Y = 3
-BTN_L1 = 4
-BTN_R1 = 5
-BTN_L2 = 6
-BTN_R2 = 7
-BTN_SELECT = 8
-BTN_START = 9
-BTN_DPAD_UP = 10
-BTN_DPAD_DOWN = 11
-BTN_DPAD_LEFT = 12
-BTN_DPAD_RIGHT = 13
 
 # Keyboard mappings for face buttons (desktop testing)
 KEY_TO_BTN = {

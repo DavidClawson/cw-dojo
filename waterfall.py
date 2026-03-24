@@ -6,6 +6,9 @@ import time
 
 from audio import CWPlayer, SAMPLE_RATE
 from band import Band, BAND_START, BAND_END, BAND_WIDTH, BAND_PLAN
+from buttons import (BTN_R1, BTN_R2, BTN_SELECT,
+                     BTN_DPAD_UP, BTN_DPAD_DOWN,
+                     BTN_DPAD_LEFT, BTN_DPAD_RIGHT)
 
 SCREEN_W, SCREEN_H = 640, 480
 
@@ -22,6 +25,7 @@ AMBER = (255, 180, 0)
 GRAY = (80, 80, 80)
 LIGHT_GRAY = (160, 160, 160)
 RED = (255, 60, 60)
+GREEN = (0, 220, 80)
 CURSOR_COLOR = (255, 255, 0)
 
 # Waterfall color gradient (dark blue -> cyan -> yellow -> red)
@@ -165,27 +169,27 @@ class WaterfallScene:
                 self._hold_right = False
 
         elif event.type == pygame.JOYBUTTONDOWN:
-            if event.button == 12:    # D-pad left
+            if event.button == BTN_DPAD_LEFT:
                 self._hold_left = True
                 self._tune(-1)
-            elif event.button == 13:  # D-pad right
+            elif event.button == BTN_DPAD_RIGHT:
                 self._hold_right = True
                 self._tune(1)
-            elif event.button == 10:  # D-pad up
+            elif event.button == BTN_DPAD_UP:
                 self.vfo_step = min(1.0, self.vfo_step * 2)
-            elif event.button == 11:  # D-pad down
+            elif event.button == BTN_DPAD_DOWN:
                 self.vfo_step = max(0.05, self.vfo_step / 2)
-            elif event.button == 5:   # R1 = noise level up
+            elif event.button == BTN_R1:
                 self._adjust_noise(0.05)
-            elif event.button == 7:   # R2 = noise level down
+            elif event.button == BTN_R2:
                 self._adjust_noise(-0.05)
-            elif event.button == 8:   # Select = back
+            elif event.button == BTN_SELECT:
                 return 'menu'
 
         elif event.type == pygame.JOYBUTTONUP:
-            if event.button == 12:    # D-pad left released
+            if event.button == BTN_DPAD_LEFT:
                 self._hold_left = False
-            elif event.button == 13:  # D-pad right released
+            elif event.button == BTN_DPAD_RIGHT:
                 self._hold_right = False
 
         return None
@@ -377,7 +381,3 @@ class WaterfallScene:
                                 SCREEN_H - 30))
 
         pygame.display.flip()
-
-
-# Need GREEN for station markers
-GREEN = (0, 220, 80)

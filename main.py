@@ -16,13 +16,10 @@ from progress import KochProgress
 from scenes import (MenuScene, StraightKeyScene, KochScene, SettingsScene,
                     GlossaryScene, CallsignScene)
 from waterfall import WaterfallScene
+from buttons import BTN_SELECT, BTN_START
 
 SCREEN_W, SCREEN_H = 640, 480
 FPS = 60
-
-# R36S button mapping
-BTN_SELECT = 8
-BTN_START = 9
 
 
 def main():

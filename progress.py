@@ -68,6 +68,9 @@ class KochProgress:
         path = path or PROGRESS_FILE
         if not os.path.exists(path):
             return cls()
-        with open(path, 'r') as f:
-            data = json.load(f)
-        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+            return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return cls()  # corrupted file, start fresh

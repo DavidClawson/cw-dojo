@@ -12,7 +12,6 @@ class Settings:
     sidetone_freq: int = 650        # Hz
     char_wpm: int = 20              # character speed (Koch sends at this speed)
     eff_wpm: int = 10               # effective/Farnsworth speed
-    noise_level: float = 0.0        # 0.0 to 1.0
     volume: float = 0.8             # master volume
     callsign: str = ''              # user's ham callsign
 
@@ -26,6 +25,9 @@ class Settings:
         path = path or SETTINGS_FILE
         if not os.path.exists(path):
             return cls()
-        with open(path, 'r') as f:
-            data = json.load(f)
-        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+            return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return cls()  # corrupted file, start fresh
