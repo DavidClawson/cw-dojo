@@ -3,6 +3,7 @@
 import pygame
 from audio import Sidetone, CWPlayer
 from morse import Decoder, KOCH_ORDER
+from sounds import sfx
 from koch import KochTrainer
 from progress import KochProgress
 from settings import Settings
@@ -96,16 +97,19 @@ class MenuScene(Scene):
     def handle_event(self, event, now_ms):
         if _is_dpad(event, 'up'):
             self.selected = (self.selected - 1) % len(self.ITEMS)
+            sfx.play('navigate')
         elif _is_dpad(event, 'down'):
             self.selected = (self.selected + 1) % len(self.ITEMS)
+            sfx.play('navigate')
         elif _is_dpad(event, 'left'):
-            # Jump up by 3 (left column)
             self.selected = max(0, self.selected - 3)
+            sfx.play('navigate')
         elif _is_dpad(event, 'right'):
-            # Jump down by 3 (right column)
             self.selected = min(len(self.ITEMS) - 1, self.selected + 3)
+            sfx.play('navigate')
         elif (_is_btn(event, BTN_A) or
               (event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN)):
+            sfx.play('select')
             return self.ITEMS[self.selected][1]
         return None
 
@@ -247,6 +251,8 @@ class KochScene(Scene):
             if answer is not None:
                 self.trainer.submit_answer(answer)
                 self.promoted = self.trainer.check_promotion()
+                if self.promoted:
+                    sfx.play('levelup')
                 self.feedback_start = now_ms
                 self.state = self.FEEDBACK
 

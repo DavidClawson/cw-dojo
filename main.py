@@ -17,6 +17,7 @@ from scenes import (MenuScene, StraightKeyScene, KochScene, SettingsScene,
                     GlossaryScene, CallsignScene)
 from waterfall import WaterfallScene
 from buttons import BTN_SELECT, BTN_START
+from sounds import sfx
 
 SCREEN_W, SCREEN_H = 640, 480
 FPS = 60
@@ -51,6 +52,9 @@ def main():
     sub = sub_font.render("Loading...", True, (180, 180, 180))
     screen.blit(sub, (SCREEN_W // 2 - sub.get_width() // 2, SCREEN_H - 40))
     pygame.display.flip()
+
+    # Init sound effects
+    sfx.init()
 
     # Load persistent state
     settings = Settings.load()
