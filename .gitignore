@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+uv.lock
+settings.json
+koch_progress.json
+*.log
+.DS_Store
