@@ -1,0 +1,27 @@
+{
+    "version": 2,
+    "name": "cw.dojo.zip",
+    "items": [
+        "CW Dojo.sh",
+        "cw.dojo/"
+    ],
+    "items_opt": null,
+    "attr": {
+        "title": "CW Dojo",
+        "desc": "Morse code (CW) trainer with Koch method, waterfall band explorer, glossary, and challenges. Designed for ham radio operators learning CW.",
+        "inst": "Ready to run.",
+        "genres": [
+            "education"
+        ],
+        "porter": [
+            "DavidClawson"
+        ],
+        "image": {},
+        "rtr": true,
+        "runtime": "python_3.11.aarch64.squashfs",
+        "reqs": [],
+        "arch": [
+            "aarch64"
+        ]
+    }
+}
