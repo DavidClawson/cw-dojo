@@ -35,14 +35,21 @@ def main():
     pygame.display.set_caption("CW Dojo")
     clock = pygame.time.Clock()
 
-    # Show loading splash immediately
-    screen.fill((0, 0, 0))
-    splash_font = pygame.font.Font(None, 72)
+    # Show splash screen immediately
+    try:
+        splash_img = pygame.image.load(
+            os.path.join(os.path.dirname(__file__) or '.', 'assets', 'splash.png'))
+        splash_img = pygame.transform.scale(splash_img, (SCREEN_W, SCREEN_H))
+        screen.blit(splash_img, (0, 0))
+    except Exception:
+        # Fallback if image not found
+        screen.fill((0, 0, 0))
+        splash_font = pygame.font.Font(None, 72)
+        title = splash_font.render("CW DOJO", True, (255, 180, 0))
+        screen.blit(title, (SCREEN_W // 2 - title.get_width() // 2, 200))
     sub_font = pygame.font.Font(None, 32)
-    title = splash_font.render("CW DOJO", True, (255, 180, 0))
-    sub = sub_font.render("Loading...", True, (80, 80, 80))
-    screen.blit(title, (SCREEN_W // 2 - title.get_width() // 2, 180))
-    screen.blit(sub, (SCREEN_W // 2 - sub.get_width() // 2, 260))
+    sub = sub_font.render("Loading...", True, (180, 180, 180))
+    screen.blit(sub, (SCREEN_W // 2 - sub.get_width() // 2, SCREEN_H - 40))
     pygame.display.flip()
 
     # Load persistent state
