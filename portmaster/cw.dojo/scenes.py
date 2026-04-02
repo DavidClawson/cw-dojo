@@ -5,6 +5,7 @@ from audio import Sidetone, CWPlayer
 from morse import Decoder, KOCH_ORDER
 from koch import KochTrainer
 from progress import KochProgress
+from profiles import ProfileManager
 from settings import Settings
 from glossary import GLOSSARY
 from buttons import (BTN_A, BTN_B, BTN_X, BTN_Y,
@@ -320,25 +321,65 @@ class SettingsScene(Scene):
         ('volume', 'Volume', '', 0.1, 0.1, 1.0),
     ]
 
-    def __init__(self, settings: Settings):
+    ACTIONS = [
+        ('user_profiles', 'User Profiles'),
+        ('reset_koch', 'Reset Koch Progress'),
+    ]
+
+    def __init__(self, settings: Settings, progress: KochProgress = None,
+                 profile_mgr: ProfileManager = None):
         self.settings = settings
+        self.progress = progress
+        self.profile_mgr = profile_mgr
         self.selected = 0
+        self.confirming_reset = False
+        self.confirm_selection = 1  # 0=Yes, 1=No (default No)
+
+    @property
+    def _total_items(self):
+        return len(self.FIELDS) + len(self.ACTIONS)
 
     def handle_event(self, event, now_ms):
+        if self.confirming_reset:
+            return self._handle_confirm(event)
+
         if _is_dpad(event, 'up'):
-            self.selected = (self.selected - 1) % len(self.FIELDS)
+            self.selected = (self.selected - 1) % self._total_items
         elif _is_dpad(event, 'down'):
-            self.selected = (self.selected + 1) % len(self.FIELDS)
+            self.selected = (self.selected + 1) % self._total_items
         elif _is_dpad(event, 'left'):
-            self._adjust(-1)
-        elif _is_dpad(event, 'right'):
-            self._adjust(1)
+            if self.selected < len(self.FIELDS):
+                self._adjust(-1)
+        elif _is_dpad(event, 'right') or _is_btn(event, BTN_A):
+            if self.selected < len(self.FIELDS):
+                if _is_dpad(event, 'right'):
+                    self._adjust(1)
+            else:
+                action_idx = self.selected - len(self.FIELDS)
+                action_name = self.ACTIONS[action_idx][0]
+                if action_name == 'user_profiles':
+                    return 'profiles'
+                elif action_name == 'reset_koch':
+                    self.confirming_reset = True
+                    self.confirm_selection = 1
         elif _is_back(event):
             self.settings.save()
             return 'menu'
         return None
 
+    def _handle_confirm(self, event):
+        if _is_dpad(event, 'left') or _is_dpad(event, 'right'):
+            self.confirm_selection = 1 - self.confirm_selection
+        elif _is_btn(event, BTN_A) or (event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN):
+            if self.confirm_selection == 0 and self.progress:
+                self.progress.reset()
+            self.confirming_reset = False
+        elif _is_back(event):
+            self.confirming_reset = False
+        return None
+
     def draw(self, screen, display):
+        active_name = self.profile_mgr.active if self.profile_mgr else ''
         items = []
         for field_name, label, unit, step, min_v, max_v in self.FIELDS:
             val = getattr(self.settings, field_name)
@@ -346,7 +387,13 @@ class SettingsScene(Scene):
                 items.append((label, f'{val:.1f}', unit))
             else:
                 items.append((label, str(val), unit))
-        display.draw_settings(items, self.selected)
+        for action_name, label in self.ACTIONS:
+            if action_name == 'user_profiles' and active_name:
+                items.append((f'{label} ({active_name})', '', ''))
+            else:
+                items.append((label, '', ''))
+        display.draw_settings(items, self.selected, self.confirming_reset,
+                              self.confirm_selection)
 
     def _adjust(self, direction):
         field_name, _, _, step, min_v, max_v = self.FIELDS[self.selected]
@@ -357,6 +404,176 @@ class SettingsScene(Scene):
         else:
             val = max(min_v, min(max_v, int(val)))
         setattr(self.settings, field_name, val)
+
+
+class ProfileScene(Scene):
+    """User profile management — list, create, switch, delete profiles."""
+
+    LIST = 'list'
+    CREATE = 'create'
+    CONFIRM_DELETE = 'confirm_delete'
+
+    NAME_CHARS = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ')
+    MAX_NAME_LEN = 10
+
+    def __init__(self, profile_mgr: ProfileManager, progress: KochProgress):
+        self.mgr = profile_mgr
+        self.progress = progress
+        self.state = self.LIST
+        self.selected = 0
+        self.new_name = []
+        self.name_cursor = 0
+        self.new_level = 0
+        self.create_field = 0
+        self.confirm_selection = 1
+
+    def on_enter(self):
+        self.state = self.LIST
+        self.selected = self.mgr.profile_names().index(self.mgr.active) \
+            if self.mgr.active in self.mgr.profile_names() else 0
+
+    def handle_event(self, event, now_ms):
+        if self.state == self.LIST:
+            return self._handle_list(event)
+        elif self.state == self.CREATE:
+            return self._handle_create(event)
+        elif self.state == self.CONFIRM_DELETE:
+            return self._handle_delete_confirm(event)
+        return None
+
+    def _handle_list(self, event):
+        names = self.mgr.profile_names()
+        total = len(names) + 1
+
+        if _is_dpad(event, 'up'):
+            self.selected = (self.selected - 1) % total
+        elif _is_dpad(event, 'down'):
+            self.selected = (self.selected + 1) % total
+        elif _is_btn(event, BTN_A) or _is_dpad(event, 'right') or \
+                (event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN):
+            if self.selected < len(names):
+                name = names[self.selected]
+                if name != self.mgr.active:
+                    self.mgr.switch_to(name, self.progress)
+            else:
+                self.state = self.CREATE
+                self.new_name = list('GUEST')
+                self.name_cursor = 4
+                self.new_level = 0
+                self.create_field = 0
+        elif _is_btn(event, BTN_X) or (event.type == pygame.KEYDOWN and event.key == pygame.K_x):
+            if self.selected < len(names) and len(names) > 1:
+                name = names[self.selected]
+                if name != self.mgr.active:
+                    self.state = self.CONFIRM_DELETE
+                    self.confirm_selection = 1
+        elif _is_back(event):
+            return 'settings'
+        return None
+
+    def _handle_create(self, event):
+        if _is_back(event):
+            self.state = self.LIST
+            return None
+
+        if self.create_field == 0:
+            if _is_dpad(event, 'up'):
+                self._cycle_char(1)
+            elif _is_dpad(event, 'down'):
+                self._cycle_char(-1)
+            elif _is_dpad(event, 'left'):
+                if self.name_cursor > 0:
+                    self.name_cursor -= 1
+            elif _is_dpad(event, 'right'):
+                if self.name_cursor < len(self.new_name) - 1:
+                    self.name_cursor += 1
+                elif len(self.new_name) < self.MAX_NAME_LEN:
+                    self.new_name.append('A')
+                    self.name_cursor = len(self.new_name) - 1
+            elif _is_btn(event, BTN_B) or (event.type == pygame.KEYDOWN and event.key == pygame.K_BACKSPACE):
+                if self.new_name:
+                    if self.name_cursor >= len(self.new_name):
+                        self.name_cursor = len(self.new_name) - 1
+                    self.new_name.pop(self.name_cursor)
+                    self.name_cursor = max(0, self.name_cursor - 1)
+            elif _is_btn(event, BTN_A) or (event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN):
+                self.create_field = 1
+        elif self.create_field == 1:
+            if _is_dpad(event, 'left'):
+                self.new_level = max(0, self.new_level - 1)
+            elif _is_dpad(event, 'right'):
+                self.new_level = min(38, self.new_level + 1)
+            elif _is_dpad(event, 'up'):
+                self.create_field = 0
+            elif _is_btn(event, BTN_A) or _is_dpad(event, 'down') or \
+                    (event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN):
+                self.create_field = 2
+        elif self.create_field == 2:
+            if _is_dpad(event, 'up'):
+                self.create_field = 1
+            elif _is_btn(event, BTN_A) or (event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN):
+                name = ''.join(self.new_name).strip()
+                if name and name not in self.mgr.profile_names():
+                    self.mgr.create_profile(name, self.new_level)
+                    self.mgr.switch_to(name, self.progress)
+                    self.state = self.LIST
+                    names = self.mgr.profile_names()
+                    self.selected = names.index(name)
+        return None
+
+    def _handle_delete_confirm(self, event):
+        if _is_dpad(event, 'left') or _is_dpad(event, 'right'):
+            self.confirm_selection = 1 - self.confirm_selection
+        elif _is_btn(event, BTN_A) or (event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN):
+            if self.confirm_selection == 0:
+                names = self.mgr.profile_names()
+                if self.selected < len(names):
+                    self.mgr.delete_profile(names[self.selected])
+                    self.selected = min(self.selected, len(self.mgr.profile_names()) - 1)
+            self.state = self.LIST
+        elif _is_back(event):
+            self.state = self.LIST
+        return None
+
+    def _cycle_char(self, direction):
+        if not self.new_name:
+            self.new_name = ['A']
+            self.name_cursor = 0
+            return
+        cur = self.new_name[self.name_cursor]
+        idx = self.NAME_CHARS.index(cur) if cur in self.NAME_CHARS else 0
+        idx = (idx + direction) % len(self.NAME_CHARS)
+        self.new_name[self.name_cursor] = self.NAME_CHARS[idx]
+
+    def draw(self, screen, display):
+        if self.state == self.LIST:
+            names = self.mgr.profile_names()
+            profiles_info = []
+            for name in names:
+                p = KochProgress.load(self.mgr.progress_file(name))
+                n_chars = min(p.level + 2, len(KOCH_ORDER))
+                is_active = (name == self.mgr.active)
+                profiles_info.append((name, n_chars, p.total_accuracy, is_active))
+            display.draw_profiles(profiles_info, self.selected)
+        elif self.state == self.CREATE:
+            chars = KOCH_ORDER[:self.new_level + 2]
+            display.draw_profile_create(
+                self.new_name, self.name_cursor,
+                self.new_level + 2, chars,
+                self.create_field,
+            )
+        elif self.state == self.CONFIRM_DELETE:
+            names = self.mgr.profile_names()
+            profiles_info = []
+            for name in names:
+                p = KochProgress.load(self.mgr.progress_file(name))
+                n_chars = min(p.level + 2, len(KOCH_ORDER))
+                is_active = (name == self.mgr.active)
+                profiles_info.append((name, n_chars, p.total_accuracy, is_active))
+            del_name = names[self.selected] if self.selected < len(names) else ''
+            display.draw_profiles(profiles_info, self.selected,
+                                  confirming_delete=del_name,
+                                  confirm_sel=self.confirm_selection)
 
 
 class GlossaryScene(Scene):

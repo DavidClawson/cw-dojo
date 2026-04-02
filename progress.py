@@ -58,6 +58,16 @@ class KochProgress:
         self.level_correct = 0
         self.level_attempts = 0
 
+    def reset(self):
+        """Reset all progress back to zero."""
+        self.level = 0
+        self.total_correct = 0
+        self.total_attempts = 0
+        self.level_correct = 0
+        self.level_attempts = 0
+        self.char_stats.clear()
+        self.save()
+
     def save(self, path=None):
         path = path or PROGRESS_FILE
         with open(path, 'w') as f:

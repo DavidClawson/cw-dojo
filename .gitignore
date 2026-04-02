@@ -3,6 +3,10 @@ __pycache__/
 .venv/
 uv.lock
 settings.json
+profiles.json
 koch_progress.json
+koch_progress_*.json
+vocab_progress.json
 *.log
 .DS_Store
+cw.dojo.zip

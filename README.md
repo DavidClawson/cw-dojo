@@ -4,19 +4,34 @@ A Morse code (CW) trainer designed for the R36S handheld game console running RO
 
 Learn CW the way you'd learn a language — through drills, listening, and practice on a device that fits in your pocket.
 
+## Screenshots
+
+| | | |
+|:---:|:---:|:---:|
+| ![Main Menu](screenshots/main-menu.png) | ![Koch Trainer](screenshots/koch-trainer.png) | ![Band Explorer](screenshots/band-explorer.png) |
+| Main Menu | Koch Trainer | Band Explorer |
+| ![Straight Key](screenshots/straight-key.png) | ![Glossary](screenshots/glossary.png) | |
+| Straight Key | Glossary | |
+
 ## Features
 
 **Straight Key** — Practice sending with the A button as a straight key. Hear your sidetone, see your dits and dahs decoded in real time.
 
+**Iambic Keyer** — Plug in a CW paddle via the 3.5mm jack (or use L1/R1 on the gamepad) for iambic A/B keying with adjustable speed.
+
 **Koch Trainer** — Receive practice using the Koch method with spaced repetition. Characters you struggle with appear more often. Toggle hints (D-pad Up) to see dit/dah patterns while learning. Progress persists between sessions.
 
-**Band Explorer** — Simulated HF waterfall display. Tune across a 40m CW band segment with D-pad, hear stations calling CQ and having QSOs. Realistic band noise with atmospheric fading and static. Adjust noise level with R1/R2.
+**Band Explorer** — Simulated HF waterfall display. Tune across a 40m CW band segment with D-pad, hear stations calling CQ and having QSOs. Realistic band noise with atmospheric fading and static.
 
-**Challenges** — Enter your callsign, then practice keying CQ calls, signal reports, and common exchanges. Press R1 to hear how it should sound, then try to match it.
+**Vocabulary Quiz** — Timed drills on common CW abbreviations and Q-codes. Listen to a CW phrase, pick the correct meaning.
+
+**QSO Procedure Trainer** — Practice full QSO exchanges: CQ calls, signal reports, and common ragchew elements. Hear the expected exchange, then key your response.
 
 **Glossary** — Browse common CW abbreviations, prosigns, Q-codes, and typical QSO phrases. Press R1 to hear any term played as CW.
 
-**Settings** — Adjust sidetone frequency, character speed (WPM), Farnsworth spacing, and master volume.
+**Profiles** — Multiple user profiles so you can share the device. Each profile tracks its own Koch progress independently.
+
+**Settings** — Adjust sidetone frequency, character speed (WPM), Farnsworth spacing, master volume, and key sound style.
 
 ## Controls (R36S)
 
@@ -27,8 +42,8 @@ Learn CW the way you'd learn a language — through drills, listening, and pract
 | B | Answer choice (Koch) |
 | X | Answer choice (Koch), delete (callsign editor) |
 | Y | Answer choice (Koch), edit callsign |
-| R1 | Play/hear audio (everywhere) |
-| R2 | Adjust noise (waterfall), clear text (challenges) |
+| L1/R1 | Iambic paddle (dit/dah), play/hear audio |
+| L2 | Take screenshot |
 | Select | Back to menu |
 | Select+Start | Quit to EmulationStation |
 
@@ -41,6 +56,7 @@ Learn CW the way you'd learn a language — through drills, listening, and pract
 | W/D/S/A | X/A/B/Y face buttons |
 | R | Replay / play audio |
 | H | Toggle hints (Koch) |
+| F12 | Take screenshot |
 | Escape | Back to menu |
 | Q | Quit |
 
@@ -53,14 +69,20 @@ Learn CW the way you'd learn a language — through drills, listening, and pract
 ## Running on Desktop (Development)
 
 ```bash
-cd morse_trainer
+git clone https://github.com/DavidClawson/cw-dojo.git
+cd cw-dojo
+```
+
+With [uv](https://docs.astral.sh/uv/):
+
+```bash
 uv run python main.py
 ```
 
-Or with pip:
+With pip:
 
 ```bash
-pip install pygame-ce numpy
+pip install -r requirements.txt
 python main.py
 ```
 
@@ -112,7 +134,7 @@ python main.py
 2. **Copy CW Dojo** to the device:
 
    ```bash
-   scp -r morse_trainer/ root@<device-ip>:/storage/roms/ports/morse_trainer/
+   scp -r cw-dojo/ root@<device-ip>:/storage/roms/ports/morse_trainer/
    ```
 
 3. **Create the launch script**:
@@ -134,31 +156,47 @@ python main.py
 ## Project Structure
 
 ```
-morse_trainer/
+cw-dojo/
   main.py         Entry point and scene dispatcher
   audio.py        Sidetone and CW character playback (numpy + pygame)
   band.py         Simulated HF band with CW stations
   buttons.py      R36S button mapping constants
-  glossary.py     CW abbreviations and Q-codes
+  glossary.py     CW abbreviations, Q-codes, and prosigns
+  keyer.py        Iambic keyer logic (Mode A/B)
   koch.py         Koch method trainer with spaced repetition
   morse.py        Morse code table, decoder, and Koch character order
+  profiles.py     Multi-user profile management
   progress.py     Persistent Koch training progress
+  qso_scripts.py  QSO exchange templates and scripts
   scenes.py       All scene classes (menu, straight key, Koch, etc.)
   settings.py     Persistent user settings
+  sounds.py       UI sound effects
   ui.py           Display rendering for all screens
+  vocab_quiz.py   Vocabulary quiz scene
   waterfall.py    Waterfall display and band explorer scene
+  assets/         Fonts, background images, and sound effects
 ```
 
-## Hardware Mod (Planned)
+## PortMaster Package
 
-A 3.5mm stereo jack (PJ-307) can be wired to the L1/L2 shoulder button pads to accept a CW straight key or iambic paddle. When nothing is plugged in, the shoulder buttons work normally (the jack's internal switches are normally closed). When a key is plugged in, the switches open and the key contacts take over.
+The `portmaster/` directory contains a standalone build of CW Dojo packaged for [PortMaster](https://portmaster.games/). This copy is currently behind the main source and needs to be rebuilt from the latest code. A GitHub Action to automate this is planned.
+
+## Hardware Mod
+
+A 3.5mm stereo jack (PJ-307) can be wired to the L1/R1 shoulder button pads to accept a CW straight key or iambic paddle. When nothing is plugged in, the shoulder buttons work normally (the jack's internal switches are normally closed). When a key is plugged in, the switches open and the key contacts take over. The `keyer.py` module handles iambic timing and mode switching.
+
+## Third-Party Assets
+
+- **Noto Sans** (`assets/NotoSans.ttf`) — Google's Noto Sans font, licensed under the [SIL Open Font License 1.1](https://scripts.sil.org/OFL).
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE) for details.
 
 ## Contributing
 
-Issues and pull requests welcome. This project is in early alpha — feedback from CW operators is especially appreciated.
+Issues and pull requests welcome. This project is in early development — feedback from CW operators is especially appreciated.
+
+If you're adapting CW Dojo for a different handheld or Linux device, the main things to change are `buttons.py` (button mappings) and the display resolution in `main.py`.
 
 73 de CW Dojo

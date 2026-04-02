@@ -12,20 +12,24 @@ import pygame
 
 ASSETS_DIR = os.path.join(os.path.dirname(__file__) or '.', 'assets')
 
-# Channel 3 reserved for UI sounds (0=sidetone, 1=CW playback, 2=noise)
-UI_CHANNEL = 3
-
 
 class SoundFX:
     """Manages UI sound effects. Fails silently if files are missing."""
 
+    # Key sound presets: (navigate_file, select_file)
+    # 0 = None, 1 = Wood Block, 2 = Soft Tap
+    KEY_SOUND_PRESETS = [
+        (None, None),
+        ('wood-echo.mp3', 'soft-wood-thump.mp3'),
+        ('wood-echo.mp3', 'wood-echo.mp3'),
+    ]
+
     def __init__(self):
         self._sounds = {}
-        self._channel = None
+        self._muted = False
 
     def init(self):
         """Call after pygame.mixer is initialized."""
-        self._channel = pygame.mixer.Channel(UI_CHANNEL)
         self._load('select', 'soft-wood-thump.mp3')
         self._load('navigate', 'wood-echo.mp3')
         self._load('levelup', 'soft-chime.mp3')
@@ -38,14 +42,33 @@ class SoundFX:
             self._sounds[name] = None
 
     def play(self, name):
+        if self._muted and name in ('select', 'navigate'):
+            return
         sound = self._sounds.get(name)
-        if sound and self._channel:
-            self._channel.play(sound)
+        if sound:
+            sound.play()
 
     def set_volume(self, volume):
+        """Set volume for all UI sounds."""
         for sound in self._sounds.values():
             if sound:
                 sound.set_volume(volume)
+
+    def apply_key_sound(self, key_sound_idx):
+        """Change which sounds play for select/navigate based on setting.
+
+        0 = None (muted), 1 = Wood Block, 2 = Soft Tap
+        """
+        if key_sound_idx == 0:
+            self._muted = True
+            return
+
+        self._muted = False
+        nav_file, sel_file = self.KEY_SOUND_PRESETS[key_sound_idx]
+        if nav_file:
+            self._load('navigate', nav_file)
+        if sel_file:
+            self._load('select', sel_file)
 
 
 # Global instance — import this

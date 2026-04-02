@@ -227,8 +227,9 @@ class Display:
 
     # --- Settings ---
 
-    def draw_settings(self, items, selected):
-        """items: list of (label, value_str, unit)"""
+    def draw_settings(self, items, selected, confirming=False, confirm_sel=1):
+        """items: list of (label, value_str, unit)
+        Action items have empty value_str and unit."""
         self.screen.fill(BLACK)
 
         title = self.font_medium.render("SETTINGS", True, AMBER)
@@ -237,18 +238,25 @@ class Display:
         y_start = 120
         for i, (label, val, unit) in enumerate(items):
             y = y_start + i * 70
+            is_action = (val == '' and unit == '')
             color = WHITE if i == selected else GRAY
 
             if i == selected:
                 bar_rect = pygame.Rect(40, y - 5, SCREEN_W - 80, 55)
-                pygame.draw.rect(self.screen, HIGHLIGHT, bar_rect, border_radius=6)
+                bar_color = (80, 40, 0) if is_action else HIGHLIGHT
+                pygame.draw.rect(self.screen, bar_color, bar_rect, border_radius=6)
 
-            lbl_surf = self.font_medium.render(label, True, color)
-            self.screen.blit(lbl_surf, (60, y))
+            if is_action:
+                act_color = AMBER if i == selected else GRAY
+                lbl_surf = self.font_medium.render(label, True, act_color)
+                self.screen.blit(lbl_surf, (SCREEN_W // 2 - lbl_surf.get_width() // 2, y))
+            else:
+                lbl_surf = self.font_medium.render(label, True, color)
+                self.screen.blit(lbl_surf, (60, y))
 
-            val_str = f"< {val} {unit} >" if i == selected else f"{val} {unit}"
-            val_surf = self.font_medium.render(val_str, True, color)
-            self.screen.blit(val_surf, (SCREEN_W - val_surf.get_width() - 60, y))
+                val_str = f"< {val} {unit} >" if i == selected else f"{val} {unit}"
+                val_surf = self.font_medium.render(val_str, True, color)
+                self.screen.blit(val_surf, (SCREEN_W - val_surf.get_width() - 60, y))
 
         help_surf = self.font_small.render(
             "D-pad U/D = Navigate    L/R = Adjust    Select = Back" if ON_DEVICE else
@@ -256,6 +264,198 @@ class Display:
         )
         self.screen.blit(help_surf, (SCREEN_W // 2 - help_surf.get_width() // 2,
                                      SCREEN_H - 40))
+
+        if confirming:
+            self._draw_confirm_dialog(
+                "Reset Koch progress?",
+                "All levels and stats will be lost.",
+                confirm_sel,
+            )
+
+        pygame.display.flip()
+
+    def _draw_confirm_dialog(self, title, message, selected):
+        """Draw a modal confirmation dialog. selected: 0=Yes, 1=No."""
+        dim = pygame.Surface((SCREEN_W, SCREEN_H))
+        dim.fill(BLACK)
+        dim.set_alpha(160)
+        self.screen.blit(dim, (0, 0))
+
+        dlg_w, dlg_h = 400, 180
+        dlg_x = (SCREEN_W - dlg_w) // 2
+        dlg_y = (SCREEN_H - dlg_h) // 2
+        pygame.draw.rect(self.screen, (30, 30, 30),
+                         (dlg_x, dlg_y, dlg_w, dlg_h), border_radius=14)
+        pygame.draw.rect(self.screen, GRAY,
+                         (dlg_x, dlg_y, dlg_w, dlg_h), width=2, border_radius=14)
+
+        title_surf = self.font_medium.render(title, True, AMBER)
+        self.screen.blit(title_surf, (SCREEN_W // 2 - title_surf.get_width() // 2,
+                                      dlg_y + 24))
+
+        msg_surf = self.font_small.render(message, True, LIGHT_GRAY)
+        self.screen.blit(msg_surf, (SCREEN_W // 2 - msg_surf.get_width() // 2,
+                                    dlg_y + 64))
+
+        btn_y = dlg_y + dlg_h - 56
+        for bi, label in enumerate(["Yes", "No"]):
+            bx = SCREEN_W // 2 + (bi * 120 - 110)
+            bw, bh = 100, 40
+            if bi == selected:
+                color = RED if bi == 0 else GREEN
+                pygame.draw.rect(self.screen, color, (bx, btn_y, bw, bh),
+                                 border_radius=8)
+            else:
+                pygame.draw.rect(self.screen, GRAY, (bx, btn_y, bw, bh),
+                                 width=2, border_radius=8)
+            btn_text = self.font_medium.render(label, True,
+                                               WHITE if bi == selected else GRAY)
+            self.screen.blit(btn_text, (bx + (bw - btn_text.get_width()) // 2,
+                                        btn_y + (bh - btn_text.get_height()) // 2))
+
+    # --- Profiles ---
+
+    def draw_profiles(self, profiles_info, selected, confirming_delete='',
+                      confirm_sel=1):
+        """Draw profile list. profiles_info: list of (name, n_chars, accuracy, is_active)"""
+        self.screen.fill(BLACK)
+
+        title = self.font_medium.render("USER PROFILES", True, AMBER)
+        self.screen.blit(title, (SCREEN_W // 2 - title.get_width() // 2, 30))
+
+        y_start = 100
+        total = len(profiles_info) + 1
+        for i in range(total):
+            y = y_start + i * 65
+            is_selected = (i == selected)
+
+            if is_selected:
+                bar_rect = pygame.Rect(40, y - 5, SCREEN_W - 80, 55)
+                pygame.draw.rect(self.screen, HIGHLIGHT, bar_rect, border_radius=6)
+
+            if i < len(profiles_info):
+                name, n_chars, accuracy, is_active = profiles_info[i]
+                color = WHITE if is_selected else GRAY
+                display_name = f"\u2605 {name}" if is_active else f"  {name}"
+                lbl = self.font_medium.render(display_name, True, color)
+                self.screen.blit(lbl, (60, y))
+                pct = int(accuracy * 100) if accuracy > 0 else 0
+                stats = f"{n_chars} chars  {pct}%"
+                stats_surf = self.font_small.render(stats, True,
+                                                    LIGHT_GRAY if is_selected else GRAY)
+                self.screen.blit(stats_surf,
+                                 (SCREEN_W - stats_surf.get_width() - 60, y + 5))
+            else:
+                color = GREEN if is_selected else GRAY
+                lbl = self.font_medium.render("+ Create New", True, color)
+                self.screen.blit(lbl, (SCREEN_W // 2 - lbl.get_width() // 2, y))
+
+        help_surf = self.font_small.render(
+            "A = Select    X = Delete    Select = Back" if ON_DEVICE else
+            "Enter = Select    X = Delete    ESC = Back", True, GRAY
+        )
+        self.screen.blit(help_surf, (SCREEN_W // 2 - help_surf.get_width() // 2,
+                                     SCREEN_H - 40))
+
+        if confirming_delete:
+            self._draw_confirm_dialog(
+                f"Delete \"{confirming_delete}\"?",
+                "This profile and its progress will be removed.",
+                confirm_sel,
+            )
+
+        pygame.display.flip()
+
+    def draw_profile_create(self, name_chars, cursor, n_chars, koch_chars,
+                            active_field):
+        """Draw the create-new-profile screen."""
+        self.screen.fill(BLACK)
+
+        title = self.font_medium.render("NEW PROFILE", True, AMBER)
+        self.screen.blit(title, (SCREEN_W // 2 - title.get_width() // 2, 30))
+
+        # Name entry
+        name_y = 100
+        name_label = self.font_medium.render("Name:", True,
+                                             WHITE if active_field == 0 else GRAY)
+        self.screen.blit(name_label, (60, name_y))
+
+        char_w = 32
+        char_gap = 4
+        name_x_start = 60
+        char_y = name_y + 45
+        for ci, ch in enumerate(name_chars):
+            x = name_x_start + ci * (char_w + char_gap)
+            is_cursor = (ci == cursor and active_field == 0)
+            if is_cursor:
+                pygame.draw.rect(self.screen, AMBER, (x, char_y, char_w, 40),
+                                 border_radius=6)
+                ch_surf = self.font_medium.render(ch, True, BLACK)
+                arr_up = self.font_small.render("\u25b2", True, AMBER)
+                self.screen.blit(arr_up, (x + (char_w - arr_up.get_width()) // 2,
+                                          char_y - 18))
+                arr_dn = self.font_small.render("\u25bc", True, AMBER)
+                self.screen.blit(arr_dn, (x + (char_w - arr_dn.get_width()) // 2,
+                                          char_y + 42))
+            else:
+                pygame.draw.rect(self.screen, GRAY, (x, char_y, char_w, 40),
+                                 width=1, border_radius=6)
+                ch_surf = self.font_medium.render(ch, True, WHITE)
+            self.screen.blit(ch_surf, (x + (char_w - ch_surf.get_width()) // 2,
+                                       char_y + (40 - ch_surf.get_height()) // 2))
+
+        # Koch level
+        level_y = 250
+        level_color = WHITE if active_field == 1 else GRAY
+        if active_field == 1:
+            pygame.draw.rect(self.screen, HIGHLIGHT,
+                             (40, level_y - 5, SCREEN_W - 80, 50), border_radius=6)
+        level_label = self.font_medium.render("Koch Level:", True, level_color)
+        self.screen.blit(level_label, (60, level_y))
+        level_val = f"< {n_chars} chars >" if active_field == 1 else f"{n_chars} chars"
+        level_surf = self.font_medium.render(level_val, True, level_color)
+        self.screen.blit(level_surf, (SCREEN_W - level_surf.get_width() - 60, level_y))
+
+        chars_str = ' '.join(koch_chars[:20])
+        if len(koch_chars) > 20:
+            chars_str += ' ...'
+        chars_surf = self.font_small.render(chars_str, True, LIGHT_GRAY)
+        self.screen.blit(chars_surf, (60, level_y + 55))
+
+        # Create button
+        btn_y = 370
+        btn_w, btn_h = 200, 48
+        btn_x = SCREEN_W // 2 - btn_w // 2
+        if active_field == 2:
+            pygame.draw.rect(self.screen, GREEN, (btn_x, btn_y, btn_w, btn_h),
+                             border_radius=10)
+        else:
+            pygame.draw.rect(self.screen, GRAY, (btn_x, btn_y, btn_w, btn_h),
+                             width=2, border_radius=10)
+        btn_text = self.font_medium.render("Create", True,
+                                           WHITE if active_field == 2 else GRAY)
+        self.screen.blit(btn_text, (SCREEN_W // 2 - btn_text.get_width() // 2,
+                                    btn_y + (btn_h - btn_text.get_height()) // 2))
+
+        if active_field == 0:
+            help1 = "U/D = Letter    L/R = Cursor    B = Delete"
+            help2 = "A = Next    Select = Cancel" if ON_DEVICE else \
+                    "Enter = Next    ESC = Cancel"
+            s1 = self.font_small.render(help1, True, GRAY)
+            s2 = self.font_small.render(help2, True, GRAY)
+            self.screen.blit(s1, (SCREEN_W // 2 - s1.get_width() // 2, SCREEN_H - 55))
+            self.screen.blit(s2, (SCREEN_W // 2 - s2.get_width() // 2, SCREEN_H - 30))
+        elif active_field == 1:
+            h = self.font_small.render(
+                "L/R = Adjust    A = Next    U = Back" if ON_DEVICE else
+                "L/R = Adjust    Enter = Next    Up = Back", True, GRAY)
+            self.screen.blit(h, (SCREEN_W // 2 - h.get_width() // 2, SCREEN_H - 40))
+        else:
+            h = self.font_small.render(
+                "A = Create    U = Back    Select = Cancel" if ON_DEVICE else
+                "Enter = Create    Up = Back    ESC = Cancel", True, GRAY)
+            self.screen.blit(h, (SCREEN_W // 2 - h.get_width() // 2, SCREEN_H - 40))
+
         pygame.display.flip()
 
     # --- Glossary ---

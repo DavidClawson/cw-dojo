@@ -13,8 +13,9 @@ import sys
 import pygame
 from settings import Settings
 from progress import KochProgress
+from profiles import ProfileManager
 from scenes import (MenuScene, StraightKeyScene, KochScene, SettingsScene,
-                    GlossaryScene, CallsignScene)
+                    ProfileScene, GlossaryScene, CallsignScene)
 from waterfall import WaterfallScene
 from buttons import BTN_SELECT, BTN_START
 
@@ -47,7 +48,8 @@ def main():
 
     # Load persistent state
     settings = Settings.load()
-    progress = KochProgress.load()
+    profile_mgr = ProfileManager.load()
+    progress = profile_mgr.load_progress()
 
     # Import Display here so pygame is already initialized
     from ui import Display
@@ -67,7 +69,8 @@ def main():
         'waterfall': WaterfallScene(settings),
         'callsign': CallsignScene(settings),
         'glossary': GlossaryScene(settings),
-        'settings': SettingsScene(settings),
+        'profiles': ProfileScene(profile_mgr, progress),
+        'settings': SettingsScene(settings, progress, profile_mgr),
     }
     current = 'menu'
     scenes[current].on_enter()
