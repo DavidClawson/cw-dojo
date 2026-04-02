@@ -181,7 +181,20 @@ cw-dojo/
 
 The `portmaster/` directory contains a standalone build of CW Dojo packaged for [PortMaster](https://portmaster.games/). This copy is currently behind the main source and needs to be rebuilt from the latest code. A GitHub Action to automate this is planned.
 
-## Hardware Mod
+## Hardware
+
+### What You Need
+
+To run CW Dojo on an R36S, you'll need:
+
+| Item | Notes |
+|------|-------|
+| **R36S handheld** | The RK3326 model running ROCKNIX. ~$35 on Amazon. |
+| **USB WiFi dongle** | Required for SSH deploy and future features. Must be Linux-compatible — the TP-Link TL-WN725N works well with ROCKNIX. |
+| **CW paddle or straight key** *(optional)* | Any paddle/key with a 3.5mm TRS plug, or use a 3.5mm cable to wire your own. |
+| **3.5mm TRS audio cable** *(optional)* | For connecting a CW key to the hardware mod. |
+
+### Hardware Mod — 3.5mm Paddle Jack
 
 A 3.5mm stereo jack (PJ-307) can be wired to the L1/R1 shoulder button pads to accept a CW straight key or iambic paddle. When nothing is plugged in, the shoulder buttons work normally (the jack's internal switches are normally closed). When a key is plugged in, the switches open and the key contacts take over. The `keyer.py` module handles iambic timing and mode switching.
 
@@ -198,5 +211,9 @@ MIT — see [LICENSE](LICENSE) for details.
 Issues and pull requests welcome. This project is in early development — feedback from CW operators is especially appreciated.
 
 If you're adapting CW Dojo for a different handheld or Linux device, the main things to change are `buttons.py` (button mappings) and the display resolution in `main.py`.
+
+## Support
+
+If CW Dojo helped you learn CW or you just think it's cool, consider [sponsoring the project on GitHub](https://github.com/sponsors/DavidClawson). It helps keep development going.
 
 73 de CW Dojo
