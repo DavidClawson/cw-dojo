@@ -19,6 +19,8 @@ Learn CW the way you'd learn a language — through drills, listening, and pract
 
 **Iambic Keyer** — Plug in a CW paddle via the 3.5mm jack (or use L1/R1 on the gamepad) for iambic A/B keying with adjustable speed.
 
+**Send Drill** — Graded send practice. Key a target letter, word, abbreviation, or callsign and get scored on accuracy *and* timing quality — dah length, dit consistency, and letter spacing — with elmer-style tips like "Dahs too short, hold for 3 dits."
+
 **Koch Trainer** — Receive practice using the Koch method with spaced repetition. Characters you struggle with appear more often. Toggle hints (D-pad Up) to see dit/dah patterns while learning. Progress persists between sessions.
 
 **Band Explorer** — Simulated HF waterfall display. Tune across a 40m CW band segment with D-pad, hear stations calling CQ and having QSOs. Realistic band noise with atmospheric fading and static.
@@ -185,6 +187,7 @@ cw-dojo/
   band.py         Simulated HF band with CW stations
   buttons.py      R36S button mapping constants
   glossary.py     CW abbreviations, Q-codes, and prosigns
+  grading.py      Send-quality timing analysis for the send drill
   keyer.py        Iambic keyer logic (Mode A/B)
   koch.py         Koch method trainer with spaced repetition
   morse.py        Morse code table, decoder, and Koch character order
@@ -195,6 +198,7 @@ cw-dojo/
   settings.py     Persistent user settings
   sounds.py       UI sound effects
   ui.py           Display rendering for all screens
+  update.py       On-device self-updater (pulls latest GitHub release)
   vocab_quiz.py   Vocabulary quiz scene
   waterfall.py    Waterfall display and band explorer scene
   assets/         Fonts, background images, and sound effects

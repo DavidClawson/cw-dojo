@@ -8,10 +8,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 PKG=portmaster/cw.dojo
-MODULES=(audio.py band.py buttons.py glossary.py keyer.py koch.py main.py
-         morse.py profiles.py progress.py qso_scripts.py scenes.py
-         settings.py sounds.py ui.py update.py vocab_quiz.py waterfall.py
-         VERSION)
+MODULES=(audio.py band.py buttons.py glossary.py grading.py keyer.py
+         koch.py main.py morse.py profiles.py progress.py qso_scripts.py
+         scenes.py settings.py sounds.py ui.py update.py vocab_quiz.py
+         waterfall.py VERSION)
 
 cp "${MODULES[@]}" "$PKG/"
 rm -rf "$PKG/assets"

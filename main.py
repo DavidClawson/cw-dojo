@@ -18,7 +18,7 @@ from progress import KochProgress
 from profiles import ProfileManager
 from scenes import (MenuScene, StraightKeyScene, KochScene, SettingsScene,
                     ProfileScene, GlossaryScene, CallsignScene,
-                    VocabQuizScene, ProcedureScene)
+                    VocabQuizScene, ProcedureScene, SendDrillScene)
 from waterfall import WaterfallScene
 from buttons import BTN_SELECT, BTN_START, BTN_L2
 from sounds import sfx
@@ -79,6 +79,7 @@ def main():
     scenes = {
         'menu': MenuScene(),
         'straight_key': StraightKeyScene(settings),
+        'send_drill': SendDrillScene(settings),
         'koch': KochScene(settings, progress),
         'waterfall': WaterfallScene(settings),
         'callsign': CallsignScene(settings),

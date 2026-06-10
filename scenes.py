@@ -12,6 +12,8 @@ from settings import Settings
 from glossary import GLOSSARY
 from vocab_quiz import VocabTrainer, VocabProgress, REQUIRED_CORRECT
 from qso_scripts import QSO_SCRIPTS, ScriptRunner
+from grading import SendRecorder, analyze
+from band import random_callsign
 from buttons import (BTN_A, BTN_B, BTN_X, BTN_Y,
                      BTN_L1, BTN_R1, BTN_L2, BTN_R2,
                      BTN_SELECT, BTN_START,
@@ -134,6 +136,7 @@ class MenuScene(Scene):
     # Two columns: Practice (left) and Reference (right)
     ITEMS = [
         ('Straight Key', 'straight_key'),
+        ('Send Drill', 'send_drill'),
         ('Challenges', 'callsign'),
         ('Koch Trainer', 'koch'),
         ('Vocab Trainer', 'vocab_quiz'),
@@ -287,6 +290,199 @@ class StraightKeyScene(Scene):
             key_is_down=self.key_is_down,
             wpm=self.decoder.wpm,
             key_mode_label=mode_label,
+        )
+
+
+class SendDrillScene(Scene):
+    """Graded send practice — key a target, get timing-quality feedback."""
+
+    LEVELS = [
+        ('Letters', 'letters'),
+        ('Words', 'words'),
+        ('Abbreviations', 'abbrevs'),
+        ('Callsigns', 'callsigns'),
+    ]
+
+    LETTER_POOL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    WORDS = ['THE', 'AND', 'YOU', 'ARE', 'HI', 'NAME', 'RIG', 'ANT',
+             'GOOD', 'CODE', 'RADIO', 'POWER', 'WATTS', 'HERE', 'FINE',
+             'COPY', 'NICE', 'HAM', 'BAND', 'KEY']
+    ABBREVS = ['CQ', 'DE', '73', 'TU', 'ES', 'FB', 'HW', 'UR', 'RST',
+               'QTH', 'QRZ', 'OM', 'GM', 'GE', 'DX', 'AGN', 'HR', 'WX']
+
+    KEYING = 'keying'
+    REPORT = 'report'
+
+    def __init__(self, settings: Settings):
+        self.settings = settings
+        self.level_idx = 0
+        self.target = ''
+        self.state = self.KEYING
+        self.report = None
+        self.sidetone = None
+        self.decoder = None
+        self.keyer = None
+        self.player = None
+        self.recorder = SendRecorder()
+        self.key_is_down = False
+
+    @property
+    def _is_iambic(self):
+        return self.settings.key_mode > 0
+
+    def on_enter(self):
+        from keyer import IambicKeyer
+        self.sidetone = Sidetone(
+            freq=self.settings.sidetone_freq,
+            volume=self.settings.volume,
+        )
+        self.player = CWPlayer(
+            freq=self.settings.sidetone_freq,
+            char_wpm=self.settings.char_wpm,
+            eff_wpm=self.settings.eff_wpm,
+            volume=self.settings.volume,
+        )
+        self.decoder = Decoder(wpm=self.settings.char_wpm)
+        self.keyer = IambicKeyer(wpm=self.settings.char_wpm)
+        self.key_is_down = False
+        self.state = self.KEYING
+        self.report = None
+        self._new_target()
+
+    def on_exit(self):
+        if self.sidetone:
+            self.sidetone.key_up()
+        if self.player:
+            self.player.stop()
+
+    def _new_target(self):
+        import random
+        kind = self.LEVELS[self.level_idx][1]
+        if kind == 'letters':
+            self.target = random.choice(self.LETTER_POOL)
+        elif kind == 'words':
+            self.target = random.choice(self.WORDS)
+        elif kind == 'abbrevs':
+            self.target = random.choice(self.ABBREVS)
+        else:
+            self.target = random_callsign()
+        self._reset_attempt()
+
+    def _reset_attempt(self):
+        self.decoder.reset()
+        self.keyer.reset()
+        self.recorder.reset()
+        self.key_is_down = False
+        self.report = None
+
+    def _key_down(self, now_ms):
+        self.key_is_down = True
+        self.sidetone.key_down()
+        self.decoder.on_key_down(now_ms)
+        self.recorder.key_down(now_ms)
+
+    def _key_up(self, now_ms):
+        self.key_is_down = False
+        self.sidetone.key_up()
+        self.decoder.on_key_up(now_ms)
+        self.recorder.key_up(now_ms)
+
+    def _submit(self, now_ms):
+        self.sidetone.key_up()
+        self.key_is_down = False
+        self.keyer.reset()
+        # Flush any pending element into a character
+        self.decoder.check_timeout(now_ms + 3 * self.decoder.dit_ms)
+        self.report = analyze(self.recorder.presses,
+                              self.settings.char_wpm,
+                              self.decoder.decoded_text,
+                              self.target)
+        sfx.play('levelup' if self.report.score >= 90 else 'select')
+        self.state = self.REPORT
+
+    def handle_event(self, event, now_ms):
+        if _is_back(event):
+            return 'menu'
+
+        if self.state == self.REPORT:
+            if _is_btn(event, BTN_A) or \
+               (event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN):
+                self.state = self.KEYING
+                self._new_target()
+            elif _is_replay(event, self._is_iambic):
+                self.player.play_text(self.target)
+            return None
+
+        # --- Keying state ---
+        if self._is_iambic:
+            if _is_dit_down(event):
+                self.keyer.paddle_dit_down()
+            elif _is_dit_up(event):
+                self.keyer.paddle_dit_up()
+
+            if _is_dah_down(event):
+                self.keyer.paddle_dah_down()
+            elif _is_dah_up(event):
+                self.keyer.paddle_dah_up()
+        else:
+            if not self.key_is_down and _is_dit_down(event):
+                self._key_down(now_ms)
+                return None
+            if self.key_is_down and _is_dit_up(event):
+                self._key_up(now_ms)
+                return None
+
+        # B = submit for grading
+        if _is_btn(event, BTN_B):
+            self._submit(now_ms)
+            return None
+
+        # D-pad up/down = change level
+        if _is_dpad(event, 'up'):
+            self.level_idx = (self.level_idx - 1) % len(self.LEVELS)
+            sfx.play('navigate')
+            self._new_target()
+        elif _is_dpad(event, 'down'):
+            self.level_idx = (self.level_idx + 1) % len(self.LEVELS)
+            sfx.play('navigate')
+            self._new_target()
+
+        # Hear the target
+        elif _is_replay(event, self._is_iambic):
+            self.player.play_text(self.target)
+
+        # R2 = clear attempt
+        elif ((event.type == pygame.JOYBUTTONDOWN and event.button == BTN_R2) or
+              (event.type == pygame.KEYDOWN and event.key == pygame.K_c)):
+            self._reset_attempt()
+
+        return None
+
+    def update(self, now_ms):
+        if self.state != self.KEYING:
+            return None
+
+        self.decoder.check_timeout(now_ms)
+
+        if self._is_iambic and self.keyer:
+            was_on = self.keyer.tone_on
+            tone_on, _ = self.keyer.update(now_ms, self.settings.key_mode)
+            if tone_on and not was_on:
+                self._key_down(now_ms)
+            elif not tone_on and was_on:
+                self._key_up(now_ms)
+        return None
+
+    def draw(self, screen, display):
+        display.draw_send_drill(
+            state=self.state,
+            level_name=self.LEVELS[self.level_idx][0],
+            target=self.target,
+            decoded_text=self.decoder.decoded_text if self.decoder else '',
+            current_element=self.decoder.current_element if self.decoder else '',
+            key_is_down=self.key_is_down,
+            report=self.report,
+            iambic=self._is_iambic,
         )
 
 

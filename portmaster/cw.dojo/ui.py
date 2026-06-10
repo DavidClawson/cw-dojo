@@ -266,15 +266,109 @@ class Display:
 
         if key_mode_label:
             self._draw_help_bar(
-                "A = Dit    Y = Dah    U/D = WPM    R2 = Clear    Select = Back"
+                "A/L1 = Dit    Y/R1 = Dah    U/D = WPM    R2 = Clear    Select = Back"
                 if ON_DEVICE else
                 "SPACE = Dit    A = Dah    U/D = WPM    C = Clear    ESC = Back"
             )
         else:
             self._draw_help_bar(
-                "A = Key    U/D = WPM    R2 = Clear    Select = Back" if ON_DEVICE else
+                "A/L1 = Key    U/D = WPM    R2 = Clear    Select = Back" if ON_DEVICE else
                 "SPACE = Key    U/D = WPM    C = Clear    ESC = Back"
             )
+        pygame.display.flip()
+
+    # --- Send Drill ---
+
+    def draw_send_drill(self, state, level_name, target, decoded_text,
+                        current_element, key_is_down, report, iambic=False):
+        self._draw_bg(self.bg_minimal)
+        self._draw_status_bar()
+
+        title = self.font_medium.render("SEND DRILL", True, DARK_GRAY)
+        self.screen.blit(title, (SCREEN_W - title.get_width() - 20, 12))
+
+        # Level pill
+        self._draw_cream_pill(level_name, self.font_small,
+            SCREEN_W // 2 - self.font_small.size(level_name)[0] // 2, 88)
+
+        if state == 'report' and report is not None:
+            # Score
+            if report.score >= 90:
+                score_color = GREEN
+            elif report.score >= 70:
+                score_color = AMBER
+            else:
+                score_color = RED
+            score_surf = self.font_title.render(f"{report.score}", True, score_color)
+            self.screen.blit(score_surf,
+                (SCREEN_W // 2 - score_surf.get_width() // 2, 125))
+
+            # Sent vs target
+            sent = decoded_text.strip() or '(nothing)'
+            cmp_color = GREEN if sent == target else RED
+            cmp_surf = self.font_medium.render(
+                f"{target}  >  {sent}", True, cmp_color)
+            self.screen.blit(cmp_surf,
+                (SCREEN_W // 2 - cmp_surf.get_width() // 2, 205))
+
+            # Speed
+            if report.actual_wpm:
+                wpm_surf = self.font_small.render(
+                    f"Your speed: ~{report.actual_wpm} WPM", True, LIGHT_GRAY)
+                self.screen.blit(wpm_surf,
+                    (SCREEN_W // 2 - wpm_surf.get_width() // 2, 245))
+
+            # Tips
+            y = 285
+            for tip in report.tips[:3]:
+                tip_surf = self.font_small.render(tip, True, WHITE)
+                self.screen.blit(tip_surf,
+                    (SCREEN_W // 2 - tip_surf.get_width() // 2, y))
+                y += 30
+
+            self._draw_help_bar(
+                "A = Next    D-Left = Hear it    Select = Back" if ON_DEVICE else
+                "D = Next    R = Hear it    ESC = Back"
+            )
+        else:
+            # Target to send
+            target_surf = self.font_large.render(target, True, WHITE)
+            self.screen.blit(target_surf,
+                (SCREEN_W // 2 - target_surf.get_width() // 2, 130))
+
+            # Key indicator
+            color = GREEN if key_is_down else DARK_GREEN
+            pygame.draw.circle(self.screen, color, (SCREEN_W // 2, 215), 15)
+            pygame.draw.circle(self.screen, GRAY, (SCREEN_W // 2, 215), 15, 2)
+
+            # Current element
+            if current_element:
+                spaced = '  '.join(current_element)
+                self._draw_cream_pill(spaced, self.font_element,
+                    SCREEN_W // 2 - self.font_element.size(spaced)[0] // 2, 245,
+                    color=DARK_GRAY)
+
+            # Decoded so far
+            if decoded_text:
+                dec_surf = self.font_medium.render(decoded_text, True, WHITE)
+                self.screen.blit(dec_surf,
+                    (SCREEN_W // 2 - dec_surf.get_width() // 2, 305))
+
+            if ON_DEVICE and iambic:
+                self._draw_help_bar_2row(
+                    "A/L1 = Dit    Y/R1 = Dah    B = Grade    D-Left = Hear",
+                    "U/D = Level    R2 = Clear    Select = Back"
+                )
+            elif ON_DEVICE:
+                self._draw_help_bar_2row(
+                    "A/L1 = Key    B = Grade    R1 = Hear    R2 = Clear",
+                    "U/D = Level    Select = Back"
+                )
+            else:
+                self._draw_help_bar_2row(
+                    "SPACE = Key    S = Grade    R = Hear    C = Clear",
+                    "U/D = Level    ESC = Back"
+                )
         pygame.display.flip()
 
     # --- Koch Trainer ---
@@ -862,7 +956,8 @@ class Display:
         pygame.display.flip()
 
     def draw_callsign_challenge(self, callsign, challenge_name, target_text,
-                                decoded_text, current_element, key_is_down):
+                                decoded_text, current_element, key_is_down,
+                                iambic=False):
         self._draw_bg(self.bg_radio)
         self._draw_status_bar()
 
@@ -894,9 +989,14 @@ class Display:
         self._draw_wrapped_text(decoded_text, 275, self.font_large, WHITE, 28)
 
         # Two-row help bar
-        if ON_DEVICE:
+        if ON_DEVICE and iambic:
             self._draw_help_bar_2row(
-                "A = Key    R1 = Hear    R2 = Clear    U/D = Challenge",
+                "A/L1 = Dit    Y/R1 = Dah    D-Left = Hear    R2 = Clear",
+                "U/D = Challenge    X = Edit Call    Select = Back"
+            )
+        elif ON_DEVICE:
+            self._draw_help_bar_2row(
+                "A/L1 = Key    R1 = Hear    R2 = Clear    U/D = Challenge",
                 "Y = Edit Call    Select = Back"
             )
         else:
@@ -909,7 +1009,8 @@ class Display:
     # --- Vocab Quiz ---
 
     def draw_vocab_trainer(self, state, trainer, decoded_text='',
-                          current_element='', key_is_down=False):
+                          current_element='', key_is_down=False,
+                          iambic=False):
         """Draw the linear vocabulary trainer."""
         self._draw_bg(self.bg_minimal)
         self._draw_status_bar()
@@ -1067,10 +1168,16 @@ class Display:
             self.screen.blit(dec_surf,
                 (SCREEN_W // 2 - dec_surf.get_width() // 2, 310))
 
-        self._draw_help_bar_2row(
-            "A = Key    B = Submit    R1 = Hear    R2 = Clear",
-            "U/D = Morse hint    Select = Back"
-        )
+        if iambic:
+            self._draw_help_bar_2row(
+                "A/L1 = Dit    Y/R1 = Dah    B = Submit    D-Left = Hear",
+                "R2 = Clear    U/D = Morse hint    Select = Back"
+            )
+        else:
+            self._draw_help_bar_2row(
+                "A/L1 = Key    B = Submit    R1 = Hear    R2 = Clear",
+                "U/D = Morse hint    Select = Back"
+            )
         pygame.display.flip()
 
     # --- Procedure Trainer ---
@@ -1124,7 +1231,7 @@ class Display:
 
     def draw_procedure_step(self, state, step, step_idx, total_steps,
                             decoded_text, current_element, key_is_down,
-                            script_name):
+                            script_name, iambic=False):
         self._draw_bg(self.bg_radio)
         self._draw_status_bar()
 
@@ -1209,10 +1316,16 @@ class Display:
                 else:
                     self.screen.blit(dec_surf, (30, 280))
 
-            self._draw_help_bar_2row(
-                "A = Key    R1 = Hear    R2 = Clear    B = Done",
-                "Start = Skip    Select = Back"
-            )
+            if iambic:
+                self._draw_help_bar_2row(
+                    "A/L1 = Dit    Y/R1 = Dah    D-Left = Hear    B = Done",
+                    "R2 = Clear    Start = Skip    Select = Back"
+                )
+            else:
+                self._draw_help_bar_2row(
+                    "A/L1 = Key    R1 = Hear    R2 = Clear    B = Done",
+                    "Start = Skip    Select = Back"
+                )
 
         elif state == 'step_done':
             # Show what was expected vs what was sent

@@ -277,6 +277,100 @@ class Display:
             )
         pygame.display.flip()
 
+    # --- Send Drill ---
+
+    def draw_send_drill(self, state, level_name, target, decoded_text,
+                        current_element, key_is_down, report, iambic=False):
+        self._draw_bg(self.bg_minimal)
+        self._draw_status_bar()
+
+        title = self.font_medium.render("SEND DRILL", True, DARK_GRAY)
+        self.screen.blit(title, (SCREEN_W - title.get_width() - 20, 12))
+
+        # Level pill
+        self._draw_cream_pill(level_name, self.font_small,
+            SCREEN_W // 2 - self.font_small.size(level_name)[0] // 2, 88)
+
+        if state == 'report' and report is not None:
+            # Score
+            if report.score >= 90:
+                score_color = GREEN
+            elif report.score >= 70:
+                score_color = AMBER
+            else:
+                score_color = RED
+            score_surf = self.font_title.render(f"{report.score}", True, score_color)
+            self.screen.blit(score_surf,
+                (SCREEN_W // 2 - score_surf.get_width() // 2, 125))
+
+            # Sent vs target
+            sent = decoded_text.strip() or '(nothing)'
+            cmp_color = GREEN if sent == target else RED
+            cmp_surf = self.font_medium.render(
+                f"{target}  >  {sent}", True, cmp_color)
+            self.screen.blit(cmp_surf,
+                (SCREEN_W // 2 - cmp_surf.get_width() // 2, 205))
+
+            # Speed
+            if report.actual_wpm:
+                wpm_surf = self.font_small.render(
+                    f"Your speed: ~{report.actual_wpm} WPM", True, LIGHT_GRAY)
+                self.screen.blit(wpm_surf,
+                    (SCREEN_W // 2 - wpm_surf.get_width() // 2, 245))
+
+            # Tips
+            y = 285
+            for tip in report.tips[:3]:
+                tip_surf = self.font_small.render(tip, True, WHITE)
+                self.screen.blit(tip_surf,
+                    (SCREEN_W // 2 - tip_surf.get_width() // 2, y))
+                y += 30
+
+            self._draw_help_bar(
+                "A = Next    D-Left = Hear it    Select = Back" if ON_DEVICE else
+                "D = Next    R = Hear it    ESC = Back"
+            )
+        else:
+            # Target to send
+            target_surf = self.font_large.render(target, True, WHITE)
+            self.screen.blit(target_surf,
+                (SCREEN_W // 2 - target_surf.get_width() // 2, 130))
+
+            # Key indicator
+            color = GREEN if key_is_down else DARK_GREEN
+            pygame.draw.circle(self.screen, color, (SCREEN_W // 2, 215), 15)
+            pygame.draw.circle(self.screen, GRAY, (SCREEN_W // 2, 215), 15, 2)
+
+            # Current element
+            if current_element:
+                spaced = '  '.join(current_element)
+                self._draw_cream_pill(spaced, self.font_element,
+                    SCREEN_W // 2 - self.font_element.size(spaced)[0] // 2, 245,
+                    color=DARK_GRAY)
+
+            # Decoded so far
+            if decoded_text:
+                dec_surf = self.font_medium.render(decoded_text, True, WHITE)
+                self.screen.blit(dec_surf,
+                    (SCREEN_W // 2 - dec_surf.get_width() // 2, 305))
+
+            if ON_DEVICE and iambic:
+                self._draw_help_bar_2row(
+                    "A/L1 = Dit    Y/R1 = Dah    B = Grade    D-Left = Hear",
+                    "U/D = Level    R2 = Clear    Select = Back"
+                )
+            elif ON_DEVICE:
+                self._draw_help_bar_2row(
+                    "A/L1 = Key    B = Grade    R1 = Hear    R2 = Clear",
+                    "U/D = Level    Select = Back"
+                )
+            else:
+                self._draw_help_bar_2row(
+                    "SPACE = Key    S = Grade    R = Hear    C = Clear",
+                    "U/D = Level    ESC = Back"
+                )
+        pygame.display.flip()
+
     # --- Koch Trainer ---
 
     def draw_koch(self, state, current_char, choices, last_correct,
