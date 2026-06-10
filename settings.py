@@ -7,17 +7,33 @@ from dataclasses import asdict, dataclass, field
 SETTINGS_FILE = 'settings.json'
 
 
+_headphone_cache = {'state': False, 'checked_ms': -10_000}
+_HEADPHONE_TTL_MS = 3000
+
+
 def _headphones_plugged():
-    """Check if headphones are plugged in via kernel input device."""
+    """Check if headphones are plugged in via kernel input device.
+
+    The evtest subprocess is slow (up to 1s), so the result is cached
+    briefly — this is read on every scene transition.
+    """
+    import time
+    now_ms = time.monotonic() * 1000
+    if now_ms - _headphone_cache['checked_ms'] < _HEADPHONE_TTL_MS:
+        return _headphone_cache['state']
+
     import subprocess
     try:
         result = subprocess.run(
             ['evtest', '--query', '/dev/input/event1', 'EV_SW', 'SW_HEADPHONE_INSERT'],
             capture_output=True, timeout=1
         )
-        return result.returncode == 10  # 10 = switch active
+        state = result.returncode == 10  # 10 = switch active
     except Exception:
-        return False
+        state = False
+    _headphone_cache['state'] = state
+    _headphone_cache['checked_ms'] = now_ms
+    return state
 
 
 @dataclass
