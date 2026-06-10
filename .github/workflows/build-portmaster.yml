@@ -20,6 +20,16 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Check VERSION matches tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(cat VERSION)"
+          if [ "$tag" != "$version" ]; then
+            echo "VERSION file ($version) does not match tag ($tag)" >&2
+            exit 1
+          fi
+
       - name: Build package
         run: bash scripts/build_portmaster.sh
 

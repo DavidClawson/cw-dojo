@@ -155,6 +155,27 @@ python main.py
 
 4. **Restart EmulationStation** — CW Dojo will appear under Ports.
 
+### Updating
+
+CW Dojo ships with a self-updater (`update.py`) that downloads the latest
+release from GitHub and installs it in place — settings and training
+progress are preserved. Create a launcher for it once:
+
+```bash
+ssh root@<device-ip>
+cat > '/storage/roms/ports/CW Dojo Update.sh' << 'EOF'
+#!/bin/bash
+. /etc/profile
+export PYTHONPATH=/storage/lib/python3.11/site-packages
+cd /storage/roms/ports/morse_trainer
+python3 update.py > /tmp/cwdojo-update.log 2>&1
+EOF
+chmod +x '/storage/roms/ports/CW Dojo Update.sh'
+```
+
+"CW Dojo Update" then appears under Ports — launch it whenever the WiFi
+dongle is plugged in to pull the newest release. No computer needed.
+
 ## Project Structure
 
 ```
