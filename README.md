@@ -179,7 +179,14 @@ cw-dojo/
 
 ## PortMaster Package
 
-The `portmaster/` directory contains a standalone build of CW Dojo packaged for [PortMaster](https://portmaster.games/). This copy is currently behind the main source and needs to be rebuilt from the latest code. A GitHub Action to automate this is planned.
+The `portmaster/` directory contains a standalone build of CW Dojo packaged for [PortMaster](https://portmaster.games/), kept in sync with the main source. To rebuild the installable zip:
+
+```bash
+cd portmaster && zip -r ../cw.dojo.zip "CW Dojo.sh" port.json cw.dojo \
+  -x '*.DS_Store' -x '*__pycache__*'
+```
+
+A GitHub Action to automate this is planned.
 
 ## Hardware
 

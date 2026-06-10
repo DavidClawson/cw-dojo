@@ -3,7 +3,7 @@
   <game>
     <path>./CW Dojo.sh</path>
     <name>CW Dojo</name>
-    <desc>Morse code (CW) trainer for ham radio operators. Features Koch method receive training with spaced repetition, a simulated HF waterfall band explorer, CW glossary with audio playback, and callsign challenges. Learn CW the way you learn a language.</desc>
+    <desc>Morse code (CW) trainer for ham radio operators. Features Koch method receive training with spaced repetition, straight key and iambic keyer practice, vocabulary and QSO procedure drills, a simulated HF waterfall band explorer, CW glossary with audio playback, and multi-user profiles. Learn CW the way you learn a language.</desc>
     <developer>DavidClawson</developer>
     <publisher>DavidClawson</publisher>
     <genre>Education</genre>
