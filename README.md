@@ -42,7 +42,9 @@ Learn CW the way you'd learn a language — through drills, listening, and pract
 | B | Answer choice (Koch) |
 | X | Answer choice (Koch), delete (callsign editor) |
 | Y | Answer choice (Koch), edit callsign |
-| L1/R1 | Iambic paddle (dit/dah), play/hear audio |
+| L1 | Dit paddle / straight key (jack tip) |
+| R1 | Dah paddle in iambic mode (jack ring); play/hear audio otherwise |
+| D-pad Left | Hear the target while keying |
 | L2 | Take screenshot |
 | Select | Back to menu |
 | Select+Start | Quit to EmulationStation |

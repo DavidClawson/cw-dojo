@@ -63,6 +63,52 @@ def _is_back(event):
             (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE))
 
 
+# --- Paddle / key inputs ---
+# The 3.5mm jack hardware mod wires a key or paddle to the L1/R1 shoulder
+# pads (tip = L1, ring = R1), so the shoulders always act as paddle inputs
+# alongside A/Y: L1 = dit / straight key, R1 = dah. Because R1 is the dah
+# paddle in iambic mode, the "hear it" control moves to D-pad Left there
+# (keyboard R works in either mode).
+
+_DIT_BUTTONS = (BTN_A, BTN_L1)
+_DAH_BUTTONS = (BTN_Y, BTN_R1)
+_DIT_KEYS = (pygame.K_SPACE, pygame.K_d)
+_DAH_KEYS = (pygame.K_a,)
+
+
+def _is_dit_down(event):
+    """Dit paddle (or straight key) pressed: A, L1, Space, or D."""
+    return ((event.type == pygame.JOYBUTTONDOWN and event.button in _DIT_BUTTONS) or
+            (event.type == pygame.KEYDOWN and event.key in _DIT_KEYS))
+
+
+def _is_dit_up(event):
+    return ((event.type == pygame.JOYBUTTONUP and event.button in _DIT_BUTTONS) or
+            (event.type == pygame.KEYUP and event.key in _DIT_KEYS))
+
+
+def _is_dah_down(event):
+    """Dah paddle pressed: Y, R1, or keyboard A."""
+    return ((event.type == pygame.JOYBUTTONDOWN and event.button in _DAH_BUTTONS) or
+            (event.type == pygame.KEYDOWN and event.key in _DAH_KEYS))
+
+
+def _is_dah_up(event):
+    return ((event.type == pygame.JOYBUTTONUP and event.button in _DAH_BUTTONS) or
+            (event.type == pygame.KEYUP and event.key in _DAH_KEYS))
+
+
+def _is_replay(event, iambic):
+    """'Hear it' inside a keying scene: D-pad Left or keyboard R, plus R1
+    in straight mode (where it isn't the dah paddle)."""
+    if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+        return True
+    if _is_dpad(event, 'left'):
+        return True
+    return (not iambic and event.type == pygame.JOYBUTTONDOWN
+            and event.button == BTN_R1)
+
+
 class Scene:
     """Base class for all app scenes."""
 
@@ -162,41 +208,29 @@ class StraightKeyScene(Scene):
         return self._handle_straight(event, now_ms)
 
     def _handle_straight(self, event, now_ms):
-        # Key down: A button or Space
-        if not self.key_is_down:
-            if (_is_btn(event, BTN_A) or
-                (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE)):
-                self.key_is_down = True
-                self.sidetone.key_down()
-                self.decoder.on_key_down(now_ms)
-                return None
+        if not self.key_is_down and _is_dit_down(event):
+            self.key_is_down = True
+            self.sidetone.key_down()
+            self.decoder.on_key_down(now_ms)
+            return None
 
-        # Key up: A button or Space released
-        if self.key_is_down:
-            if ((event.type == pygame.JOYBUTTONUP and event.button == BTN_A) or
-                (event.type == pygame.KEYUP and event.key == pygame.K_SPACE)):
-                self.key_is_down = False
-                self.sidetone.key_up()
-                self.decoder.on_key_up(now_ms)
-                return None
+        if self.key_is_down and _is_dit_up(event):
+            self.key_is_down = False
+            self.sidetone.key_up()
+            self.decoder.on_key_up(now_ms)
+            return None
 
         return self._handle_common(event, now_ms)
 
     def _handle_iambic(self, event, now_ms):
-        # Dit paddle: A button or Space
-        if _is_btn(event, BTN_A) or \
-           (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE):
+        if _is_dit_down(event):
             self.keyer.paddle_dit_down()
-        elif (event.type == pygame.JOYBUTTONUP and event.button == BTN_A) or \
-             (event.type == pygame.KEYUP and event.key == pygame.K_SPACE):
+        elif _is_dit_up(event):
             self.keyer.paddle_dit_up()
 
-        # Dah paddle: Y button or W key
-        if _is_btn(event, BTN_Y) or \
-           (event.type == pygame.KEYDOWN and event.key == pygame.K_a):
+        if _is_dah_down(event):
             self.keyer.paddle_dah_down()
-        elif (event.type == pygame.JOYBUTTONUP and event.button == BTN_Y) or \
-             (event.type == pygame.KEYUP and event.key == pygame.K_a):
+        elif _is_dah_up(event):
             self.keyer.paddle_dah_up()
 
         return self._handle_common(event, now_ms)
@@ -942,39 +976,31 @@ class CallsignScene(Scene):
         """Handle keying practice for challenges (straight or iambic)."""
         if self._is_iambic:
             # Iambic paddle events
-            if _is_btn(event, BTN_A) or \
-               (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE):
+            if _is_dit_down(event):
                 self.keyer.paddle_dit_down()
                 self.active = True
-            elif (event.type == pygame.JOYBUTTONUP and event.button == BTN_A) or \
-                 (event.type == pygame.KEYUP and event.key == pygame.K_SPACE):
+            elif _is_dit_up(event):
                 self.keyer.paddle_dit_up()
 
-            if _is_btn(event, BTN_Y) or \
-               (event.type == pygame.KEYDOWN and event.key == pygame.K_a):
+            if _is_dah_down(event):
                 self.keyer.paddle_dah_down()
                 self.active = True
-            elif (event.type == pygame.JOYBUTTONUP and event.button == BTN_Y) or \
-                 (event.type == pygame.KEYUP and event.key == pygame.K_a):
+            elif _is_dah_up(event):
                 self.keyer.paddle_dah_up()
         else:
             # Straight key
-            if not self.key_is_down:
-                if (_is_btn(event, BTN_A) or
-                    (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE)):
-                    self.key_is_down = True
-                    self.active = True
-                    self.sidetone.key_down()
-                    self.decoder.on_key_down(now_ms)
-                    return None
+            if not self.key_is_down and _is_dit_down(event):
+                self.key_is_down = True
+                self.active = True
+                self.sidetone.key_down()
+                self.decoder.on_key_down(now_ms)
+                return None
 
-            if self.key_is_down:
-                if ((event.type == pygame.JOYBUTTONUP and event.button == BTN_A) or
-                    (event.type == pygame.KEYUP and event.key == pygame.K_SPACE)):
-                    self.key_is_down = False
-                    self.sidetone.key_up()
-                    self.decoder.on_key_up(now_ms)
-                    return None
+            if self.key_is_down and _is_dit_up(event):
+                self.key_is_down = False
+                self.sidetone.key_up()
+                self.decoder.on_key_up(now_ms)
+                return None
 
             # Y = edit callsign (only in straight key mode)
             if _is_btn(event, BTN_Y):
@@ -1001,9 +1027,8 @@ class CallsignScene(Scene):
             self.edit_buffer = list(self.callsign)
             self.edit_pos = len(self.edit_buffer)
 
-        # R1 = hear the target played as CW
-        elif ((event.type == pygame.JOYBUTTONDOWN and event.button == BTN_R1) or
-              (event.type == pygame.KEYDOWN and event.key == pygame.K_r)):
+        # Hear the target played as CW
+        elif _is_replay(event, self._is_iambic):
             if self.target_text:
                 self._cw_player.play_text(self.target_text)
 
@@ -1050,6 +1075,7 @@ class CallsignScene(Scene):
                 decoded_text=self.decoder.decoded_text if self.decoder else '',
                 current_element=self.decoder.current_element if self.decoder else '',
                 key_is_down=self.key_is_down,
+                iambic=self._is_iambic,
             )
 
 
@@ -1158,36 +1184,28 @@ class VocabQuizScene(Scene):
     def _handle_keying(self, event, now_ms):
         if self._is_iambic:
             # Iambic paddle events
-            if _is_btn(event, BTN_A) or \
-               (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE):
+            if _is_dit_down(event):
                 self.keyer.paddle_dit_down()
-            elif (event.type == pygame.JOYBUTTONUP and event.button == BTN_A) or \
-                 (event.type == pygame.KEYUP and event.key == pygame.K_SPACE):
+            elif _is_dit_up(event):
                 self.keyer.paddle_dit_up()
 
-            if _is_btn(event, BTN_Y) or \
-               (event.type == pygame.KEYDOWN and event.key == pygame.K_a):
+            if _is_dah_down(event):
                 self.keyer.paddle_dah_down()
-            elif (event.type == pygame.JOYBUTTONUP and event.button == BTN_Y) or \
-                 (event.type == pygame.KEYUP and event.key == pygame.K_a):
+            elif _is_dah_up(event):
                 self.keyer.paddle_dah_up()
         else:
             # Straight key
-            if not self.key_is_down:
-                if (_is_btn(event, BTN_A) or
-                    (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE)):
-                    self.key_is_down = True
-                    self.sidetone.key_down()
-                    self.decoder.on_key_down(now_ms)
-                    return None
+            if not self.key_is_down and _is_dit_down(event):
+                self.key_is_down = True
+                self.sidetone.key_down()
+                self.decoder.on_key_down(now_ms)
+                return None
 
-            if self.key_is_down:
-                if ((event.type == pygame.JOYBUTTONUP and event.button == BTN_A) or
-                    (event.type == pygame.KEYUP and event.key == pygame.K_SPACE)):
-                    self.key_is_down = False
-                    self.sidetone.key_up()
-                    self.decoder.on_key_up(now_ms)
-                    return None
+            if self.key_is_down and _is_dit_up(event):
+                self.key_is_down = False
+                self.sidetone.key_up()
+                self.decoder.on_key_up(now_ms)
+                return None
 
         # B = submit
         if _is_btn(event, BTN_B):
@@ -1210,9 +1228,8 @@ class VocabQuizScene(Scene):
             if self.keyer:
                 self.keyer.reset()
 
-        # R1 = hear it
-        if ((event.type == pygame.JOYBUTTONDOWN and event.button == BTN_R1) or
-            (event.type == pygame.KEYDOWN and event.key == pygame.K_r)):
+        # Hear it
+        if _is_replay(event, self._is_iambic):
             if self.trainer.term:
                 self.player.play_text(self.trainer.term)
 
@@ -1265,6 +1282,7 @@ class VocabQuizScene(Scene):
             decoded_text=self.decoder.decoded_text if self.decoder else '',
             current_element=self.decoder.current_element if self.decoder else '',
             key_is_down=self.key_is_down,
+            iambic=self._is_iambic,
         )
 
 
@@ -1389,40 +1407,31 @@ class ProcedureScene(Scene):
     def _handle_sending(self, event, now_ms):
         if self._is_iambic:
             # Iambic paddle events
-            if _is_btn(event, BTN_A) or \
-               (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE):
+            if _is_dit_down(event):
                 self.keyer.paddle_dit_down()
-            elif (event.type == pygame.JOYBUTTONUP and event.button == BTN_A) or \
-                 (event.type == pygame.KEYUP and event.key == pygame.K_SPACE):
+            elif _is_dit_up(event):
                 self.keyer.paddle_dit_up()
 
-            if _is_btn(event, BTN_Y) or \
-               (event.type == pygame.KEYDOWN and event.key == pygame.K_a):
+            if _is_dah_down(event):
                 self.keyer.paddle_dah_down()
-            elif (event.type == pygame.JOYBUTTONUP and event.button == BTN_Y) or \
-                 (event.type == pygame.KEYUP and event.key == pygame.K_a):
+            elif _is_dah_up(event):
                 self.keyer.paddle_dah_up()
         else:
-            # Straight key: A button
-            if not self.key_is_down:
-                if (_is_btn(event, BTN_A) or
-                    (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE)):
-                    self.key_is_down = True
-                    self.sidetone.key_down()
-                    self.decoder.on_key_down(now_ms)
-                    return None
+            # Straight key
+            if not self.key_is_down and _is_dit_down(event):
+                self.key_is_down = True
+                self.sidetone.key_down()
+                self.decoder.on_key_down(now_ms)
+                return None
 
-            if self.key_is_down:
-                if ((event.type == pygame.JOYBUTTONUP and event.button == BTN_A) or
-                    (event.type == pygame.KEYUP and event.key == pygame.K_SPACE)):
-                    self.key_is_down = False
-                    self.sidetone.key_up()
-                    self.decoder.on_key_up(now_ms)
-                    return None
+            if self.key_is_down and _is_dit_up(event):
+                self.key_is_down = False
+                self.sidetone.key_up()
+                self.decoder.on_key_up(now_ms)
+                return None
 
-        # R1 = hear the target
-        if ((event.type == pygame.JOYBUTTONDOWN and event.button == BTN_R1) or
-            (event.type == pygame.KEYDOWN and event.key == pygame.K_r)):
+        # Hear the target
+        if _is_replay(event, self._is_iambic):
             if self.runner and self.runner.current_step:
                 _, _, text = self.runner.current_step
                 self.player.play_text(text)
@@ -1520,4 +1529,5 @@ class ProcedureScene(Scene):
                 current_element=self.decoder.current_element if self.decoder else '',
                 key_is_down=self.key_is_down,
                 script_name=self.runner.script['name'] if self.runner else '',
+                iambic=self._is_iambic,
             )

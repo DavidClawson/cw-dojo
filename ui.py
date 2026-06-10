@@ -266,13 +266,13 @@ class Display:
 
         if key_mode_label:
             self._draw_help_bar(
-                "A = Dit    Y = Dah    U/D = WPM    R2 = Clear    Select = Back"
+                "A/L1 = Dit    Y/R1 = Dah    U/D = WPM    R2 = Clear    Select = Back"
                 if ON_DEVICE else
                 "SPACE = Dit    A = Dah    U/D = WPM    C = Clear    ESC = Back"
             )
         else:
             self._draw_help_bar(
-                "A = Key    U/D = WPM    R2 = Clear    Select = Back" if ON_DEVICE else
+                "A/L1 = Key    U/D = WPM    R2 = Clear    Select = Back" if ON_DEVICE else
                 "SPACE = Key    U/D = WPM    C = Clear    ESC = Back"
             )
         pygame.display.flip()
@@ -862,7 +862,8 @@ class Display:
         pygame.display.flip()
 
     def draw_callsign_challenge(self, callsign, challenge_name, target_text,
-                                decoded_text, current_element, key_is_down):
+                                decoded_text, current_element, key_is_down,
+                                iambic=False):
         self._draw_bg(self.bg_radio)
         self._draw_status_bar()
 
@@ -894,9 +895,14 @@ class Display:
         self._draw_wrapped_text(decoded_text, 275, self.font_large, WHITE, 28)
 
         # Two-row help bar
-        if ON_DEVICE:
+        if ON_DEVICE and iambic:
             self._draw_help_bar_2row(
-                "A = Key    R1 = Hear    R2 = Clear    U/D = Challenge",
+                "A/L1 = Dit    Y/R1 = Dah    D-Left = Hear    R2 = Clear",
+                "U/D = Challenge    X = Edit Call    Select = Back"
+            )
+        elif ON_DEVICE:
+            self._draw_help_bar_2row(
+                "A/L1 = Key    R1 = Hear    R2 = Clear    U/D = Challenge",
                 "Y = Edit Call    Select = Back"
             )
         else:
@@ -909,7 +915,8 @@ class Display:
     # --- Vocab Quiz ---
 
     def draw_vocab_trainer(self, state, trainer, decoded_text='',
-                          current_element='', key_is_down=False):
+                          current_element='', key_is_down=False,
+                          iambic=False):
         """Draw the linear vocabulary trainer."""
         self._draw_bg(self.bg_minimal)
         self._draw_status_bar()
@@ -1067,10 +1074,16 @@ class Display:
             self.screen.blit(dec_surf,
                 (SCREEN_W // 2 - dec_surf.get_width() // 2, 310))
 
-        self._draw_help_bar_2row(
-            "A = Key    B = Submit    R1 = Hear    R2 = Clear",
-            "U/D = Morse hint    Select = Back"
-        )
+        if iambic:
+            self._draw_help_bar_2row(
+                "A/L1 = Dit    Y/R1 = Dah    B = Submit    D-Left = Hear",
+                "R2 = Clear    U/D = Morse hint    Select = Back"
+            )
+        else:
+            self._draw_help_bar_2row(
+                "A/L1 = Key    B = Submit    R1 = Hear    R2 = Clear",
+                "U/D = Morse hint    Select = Back"
+            )
         pygame.display.flip()
 
     # --- Procedure Trainer ---
@@ -1124,7 +1137,7 @@ class Display:
 
     def draw_procedure_step(self, state, step, step_idx, total_steps,
                             decoded_text, current_element, key_is_down,
-                            script_name):
+                            script_name, iambic=False):
         self._draw_bg(self.bg_radio)
         self._draw_status_bar()
 
@@ -1209,10 +1222,16 @@ class Display:
                 else:
                     self.screen.blit(dec_surf, (30, 280))
 
-            self._draw_help_bar_2row(
-                "A = Key    R1 = Hear    R2 = Clear    B = Done",
-                "Start = Skip    Select = Back"
-            )
+            if iambic:
+                self._draw_help_bar_2row(
+                    "A/L1 = Dit    Y/R1 = Dah    D-Left = Hear    B = Done",
+                    "R2 = Clear    Start = Skip    Select = Back"
+                )
+            else:
+                self._draw_help_bar_2row(
+                    "A/L1 = Key    R1 = Hear    R2 = Clear    B = Done",
+                    "Start = Skip    Select = Back"
+                )
 
         elif state == 'step_done':
             # Show what was expected vs what was sent
